@@ -1,0 +1,47 @@
+# core deep learning stuff
+torch>=2.0.0
+torchvision>=0.15.0
+
+# face detection and recognition - tried dlib first but mtcnn works better
+facenet-pytorch>=2.5.3
+insightface>=0.7.3
+
+# image processing
+opencv-python>=4.8.0
+Pillow>=10.0.0
+scikit-image>=0.21.0
+
+# api framework
+fastapi>=0.103.0
+uvicorn>=0.23.0
+python-multipart>=0.0.6
+
+# model optimization for production
+onnx>=1.14.0
+onnxruntime>=1.15.0
+onnxscript>=0.1.0
+
+# dataset handling
+kaggle>=1.5.16
+pandas>=2.0.0
+
+# training utilities
+matplotlib>=3.7.0
+tqdm>=4.66.0
+tensorboard>=2.14.0
+
+# video processing
+moviepy>=1.0.3
+ffmpeg-python>=0.2.0
+
+# misc utilities
+numpy>=1.24.0
+scipy>=1.11.0
+pyyaml>=6.0.1
+python-dotenv>=1.0.0
+requests>=2.31.0
+
+# testing
+pytest>=7.4.0
+pytest-cov>=4.1.0
+httpx>=0.24.0

@@ -1,0 +1,41 @@
+# python stuff
+__pycache__/
+*.py[cod]
+*.so
+.Python
+venv/
+env/
+.venv/
+
+# ide junk
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# training outputs - dont commit these, theyre huge
+checkpoints/*.pt
+checkpoints/*.onnx
+checkpoints/*.trt
+graphs/*.png
+logs/
+
+# dataset - definitely dont commit this
+data/v1/
+data/raw/
+data/processed/
+data/new_images/
+
+# test outputs
+*.jpg
+*.png
+*.mp4
+!graphs/.gitkeep
+
+# misc
+.env
+*.log
+htmlcov/
+.coverage
+.pytest_cache/
