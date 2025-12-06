@@ -1,31 +1,31 @@
-# Face Swap AI
+# AI Face Swap
 
-my attempt at building a face swap system from scratch. took way longer than expected but finally got it working decently.
+My attempt at building a face swap system from scratch. It took way longer than expected but finally works decently well.
 
-swaps faces between images/videos while trying to keep expressions and lighting looking natural. not perfect but gets the job done for most cases.
+It swaps faces between images/videos while trying to keep expressions and lighting natural. Not perfect, but good enough for most cases.
 
-## what it does
+## What it does
 
-- swap faces in images (the main thing)
-- video face swap with smoothing so it doesnt flicker like crazy
-- webcam support if you want to mess around in real-time
-- api server for integration with other stuff
-- onnx export for faster inference
+- face swap between two images (main feature)
+- video face swap with temporal smoothing (reduces flicker)
+- webcam support for real-time experimentation
+- FastAPI server for integration with other apps
+- ONNX export for faster inference
 
-## how it works
+## How it works
 
-basically a GAN setup with 3 networks:
+Basically a GAN based architecture with three networks:
 
-1. **encoder** - resnet50 backbone, spits out 512-dim vector representing "who" the person is
-2. **generator** - unet style with adain layers to inject the identity
-3. **discriminator** - patchgan to keep things looking realistic
+1. **Identity Encoder** - ResNet50 backbone, spits out 512-dim vector representing "who" the person is (identity vector)
+2. **Generator** - U-Net style with AdaIN layers to inject identity features
+3. **Discriminator** - PatchGAN to enforce realism
 
-spent a lot of time tuning the loss functions to balance identity preservation vs image quality. still not perfect but way better than my first attempts.
+A lot of time was spent tuning loss weights to balance identity vs. image quality. Still not perfect yet far better than earlier attempts.
 
 ## project structure
 
 ```
-face-swap-ai/
+ai-face-swap/
 ├── api/                    # fastapi server
 ├── config/                 # settings and hyperparams
 ├── dataset/                # data loading, preprocessing
@@ -40,14 +40,14 @@ face-swap-ai/
 └── Makefile                # useful commands
 ```
 
-## setup
+## Setup
 
 ```bash
-# the usual venv stuff
+# create virtual environment
 python -m venv venv
 source venv/bin/activate
 
-# install deps
+# install dependencies
 pip install -r requirements.txt
 
 # or just use make
@@ -60,25 +60,29 @@ if you have a gpu (highly recommended, cpu is painfully slow):
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
 ```
 
-## getting started
+## Getting started
 
-### 1. get the dataset
+### 1. download dataset
 
-using LFW from kaggle. you'll need to set up kaggle api key first (google it, its pretty straightforward)
+Using LFW from kaggle. you'll need to set up kaggle api key first
 
 ```bash
 make download
-# or: python train.py --download
+# or: 
+python train.py --download
 ```
 
-### 2. train
+### 2. train the model
 
 ```bash
 make train
-# or for a quick test: make train-quick
+# or for a quick test: 
+make train-quick
 ```
 
-this takes a while. go grab coffee or something. checkpoints save to `checkpoints/`, loss graphs to `graphs/`
+Checkpoints save to `checkpoints/`, loss graphs to `graphs/`
+
+_Note_: This process can take a while, especially without a GPU.
 
 ### 3. export for production
 
@@ -86,14 +90,15 @@ this takes a while. go grab coffee or something. checkpoints save to `checkpoint
 make export
 ```
 
-converts to onnx which is like 2x faster for inference
+exports to ONNX which is 2x faster for inference
 
 ### 4. run the api
 
 ```bash
 make api
-# server starts at localhost:8000
+
 ```
+Served at: http://localhost:8000/
 
 ## using the api
 
@@ -115,7 +120,7 @@ curl -X POST http://localhost:8000/swap/image/upload \
     --output result.jpg
 ```
 
-theres also swagger docs at `http://localhost:8000/docs` if you prefer clicking around
+Swagger docs: http://localhost:8000/docs
 
 ## video stuff
 
@@ -127,46 +132,85 @@ python scripts/process_video.py --source face.jpg --video input.mp4 --output out
 make swap-video SOURCE=face.jpg VIDEO=input.mp4
 ```
 
-heads up: video processing is slow without gpu. like really slow. a 30 sec video might take 5+ mins on cpu
+**CPU is slow, a 30s video may take 5+ minutes without GPU.**
 
 ## training notes
 
-the loss function is a mix of several things (took forever to balance these):
+the loss function is a mix of several objectives (took forever to balance these):
 
-- **identity loss** - makes sure the output looks like the source person
-- **reconstruction loss** - L1 + SSIM, keeps structure intact
-- **adversarial loss** - the usual GAN stuff
-- **perceptual loss** - vgg features so it doesnt look blurry
-- **color loss** - matches skin tones
+- **identity loss** - preserve who the person is
+- **reconstruction loss** - L1 + SSIM for structure retention
+- **adversarial loss** - the usual GAN objective (realism)
+- **perceptual loss** - VGG features matching
+- **color loss** - consistent skin tones
 
-default hyperparams are in `config/settings.py`. the ones that matter most:
+Key hyperparameters in `config/settings.py`:
 
 - batch size: 8 (lower if you run out of vram)
 - lr for generator: 1e-4
 - lr for discriminator: 4e-4 (yes its higher, helps with training stability)
 
+## training results
+
+below are the training curves from a run on the lfw dataset:
+
+### overall training loss
+![Total Losses](examples/total_losses.png)
+
+the total loss decreases steadily: indicating that both identity preservation and realism improve during training.
+
+---
+
+### identity preservation
+![Identity Loss](examples/identity_loss.png)
+
+the identity loss drops consistently: the model learns to keep the source person’s unique features.
+
+---
+
+### generator vs discriminator
+
+both networks improve together. if one curve drops too fast or spikes, training becomes unstable.
+
+| metric | graph |
+|--------|-------|
+| **generator loss** | ![Generator Loss](examples/generator_loss.png) |
+| **discriminator loss** | ![Discriminator Loss](examples/discriminator_loss.png) |
+
+there is a healthy balance between the generator and discriminator: no mode collapse or unstable oscillations.
+
+---
+
+### reconstruction quality
+![Reconstruction Loss](examples/reconstruction_loss.png)
+
+good downward trend: structure and skin details improve over time.
+
+---
+
+these curves show that the model is training in a **stable GAN regime**, converging without collapsing.
+
+
 ## performance
 
 tested on my rtx 3080:
 
-| mode     | speed                            |
-| -------- | -------------------------------- |
-| pytorch  | ~45ms per image                  |
-| onnx     | ~25ms                            |
-| tensorrt | ~12ms (havent fully tested this) |
+| mode     | speed (per image)  |
+| -------- | ------------------ |
+| PyTorch  | ~45ms              |
+| ONNX     | ~25ms              |
+| TensorRT | ~12ms (early test) |
 
-cpu is like 500ms+ so... yeah get a gpu
+CPU: ~500ms+ so GPU strongly recommended.
 
 ## known issues / limitations
 
-stuff that doesnt work great yet:
-
 - side profiles - works best with frontal faces
-- glasses/occlusions - sometimes gets weird
+- glasses/occlusion still inconsistent
 - extreme lighting - can mess up skin tones
-- LFW is a small dataset - results would probably be better with vggface2 or something bigger
+- LFW is a small dataset - larger datasets (example: VGGFace2) would help
 
-## running tests
+## Running tests
 
 ```bash
 make test          # run all tests
@@ -174,18 +218,16 @@ make test-cov      # with coverage report
 make verify        # quick sanity check
 ```
 
-## todo
+## Todo
 
-- [ ] better handling of side profiles
+- [ ] Improve profile face handling
 - [ ] face segmentation for cleaner blending
 - [ ] maybe try a different architecture (stylegan based?)
-- [ ] proper tensorrt support
+- [ ] proper TensorRT support
 
 
-## references
+## References
 
-some stuff i found helpful while building this:
-
-- insightface/arcface for the identity encoder idea
-- the spade paper for normalization
-- bunch of stackoverflow threads
+- Insightface/arcface for the identity encoder idea
+- The spade paper for normalization
+- Stackoverflow threads
