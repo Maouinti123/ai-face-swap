@@ -39,3 +39,10 @@ data/new_images/
 htmlcov/
 .coverage
 .pytest_cache/
+
+
+# allow placeholder files to show folders
+!logs/.gitkeep
+!data/new_images/.gitkeep
+!data/v1/aligned/.gitkeep
+!data/v1/raw/.gitkeep
