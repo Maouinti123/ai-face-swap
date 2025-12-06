@@ -46,3 +46,7 @@ htmlcov/
 !data/new_images/.gitkeep
 !data/v1/aligned/.gitkeep
 !data/v1/raw/.gitkeep
+
+
+# allow example result images to be tracked
+!examples/*.png
